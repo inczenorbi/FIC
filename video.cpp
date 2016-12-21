@@ -19,6 +19,11 @@ using namespace std;
 using namespace cv;
 //initial min and max HSV filter values.
 //these will be changed using trackbars
+int X_MIN = 0;
+int X_MAX = 1080;
+int Y_MIN = 0;
+int Y_MAX = 1024;
+
 int H_MIN = 0;
 int H_MAX = 256;
 int S_MIN = 0;
@@ -97,6 +102,9 @@ void createTrackbars() {
 	sprintf(TrackbarName, "S_MAX", S_MAX);
 	sprintf(TrackbarName, "V_MIN", V_MIN);
 	sprintf(TrackbarName, "V_MAX", V_MAX);
+ 
+	sprintf(TrackbarName, "X", X_MIN);
+	sprintf(TrackbarName, "Y", Y_MIN);
 	//create trackbars and insert them into window
 	//3 parameters are: the address of the variable that is changing when the trackbar is moved(eg.H_LOW),
 	//the max value the trackbar can move (eg. H_HIGH),
@@ -108,8 +116,9 @@ void createTrackbars() {
 	createTrackbar("S_MAX", trackbarWindowName, &S_MAX, S_MAX, on_trackbar);
 	createTrackbar("V_MIN", trackbarWindowName, &V_MIN, V_MAX, on_trackbar);
 	createTrackbar("V_MAX", trackbarWindowName, &V_MAX, V_MAX, on_trackbar);
-
-
+ 
+	createTrackbar("X", trackbarWindowName, &X_MIN, X_MAX, on_trackbar);
+	createTrackbar("Y", trackbarWindowName, &Y_MIN, Y_MAX, on_trackbar);
 }
 void drawObject(int x, int y, Mat &frame) {
 
@@ -261,19 +270,20 @@ int main(int argc, char* argv[])
 		//filter HSV image between values and store filtered image to
 		//threshold matrix
    
-   	/*	inRange(HSV, Scalar(H_MIN, S_MIN, V_MIN), Scalar(H_MAX, S_MAX, V_MAX), threshold);
+   		inRange(HSV, Scalar(H_MIN, S_MIN, V_MIN), Scalar(H_MAX, S_MAX, V_MAX), threshold);
 		//perform morphological operations on thresholded image to eliminate noise
 		//and emphasize the filtered object(s)
-		if (useMorphOps)
+/*		if (useMorphOps)
 			morphOps(threshold);
 		//pass in thresholded frame to our object tracking function
 		//this function will return the x and y coordinates of the
 		//filtered object
 		if (trackObjects)
 			trackFilteredObject(x, y, threshold, cameraFeed);
-   
    */
+		drawObject(X_MIN, Y_MIN, cameraFeed);
    
+   /* 3 szin eszlelese
    
 		inRange(HSV, Scalar(H_MIN_R, S_MIN_R, V_MIN_R), Scalar(H_MAX_R, S_MAX_R, V_MAX_R), threshold);
 		//perform morphological operations on thresholded image to eliminate noise
@@ -307,11 +317,13 @@ int main(int argc, char* argv[])
 		//filtered object
 		if (trackObjects)
 			trackFilteredObject(x, y, threshold, cameraFeed);
+*/
 
 		//show frames
-		imshow(windowName2, threshold);
+		//imshow(windowName2, threshold);
 		imshow(windowName, cameraFeed);
 		//imshow(windowName1, HSV);
+   
    /*
    //socket transmision
    socketfd=socket(AF_INET,SOCK_STREAM,0);

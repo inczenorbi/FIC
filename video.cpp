@@ -9,43 +9,31 @@
 
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <netdb.h> 
+#include <netdb.h>
 #include <opencv2/core/core.hpp>
 #include <sys/types.h>
 #include <unistd.h>
 #include <errno.h>
 
+#include "func.c"
+
+#define cr 0
+
 using namespace std;
 using namespace cv;
 //initial min and max HSV filter values.
 //these will be changed using trackbars
-int H_MIN = 0;
-int H_MAX = 256;
-int S_MIN = 0;
-int S_MAX = 256;
-int V_MIN = 0;
-int V_MAX = 256;
+int X_MIN = 0;
+int X_MAX = 1080;
+int Y_MIN = 0;
+int Y_MAX = 1024;
 
-int H_MIN_G = 0;
-int H_MAX_G = 256;
-int S_MIN_G = 91;
-int S_MAX_G = 165;
-int V_MIN_G = 231;
-int V_MAX_G = 256;
-
-int H_MIN_R = 0;
-int H_MAX_R = 6;
-int S_MIN_R = 158;
-int S_MAX_R = 256;
-int V_MIN_R = 0;
-int V_MAX_R = 256;
-
-int H_MIN_V = 46;
-int H_MAX_V = 256;
-int S_MIN_V = 0;
-int S_MAX_V = 256;
-int V_MIN_V = 100;
-int V_MAX_V = 210;
+int BH_MIN = 0;
+int BH_MAX = 256;
+int BS_MIN = 0;
+int BS_MAX = 256;
+int BV_MIN = 0;
+int BV_MAX = 256;
 
 //default capture width and height
 const int FRAME_WIDTH = 640;
@@ -62,23 +50,18 @@ const std::string windowName2 = "Thresholded Image";
 const std::string windowName3 = "After Morphological Operations";
 const std::string trackbarWindowName = "Trackbars";
 
-
-void on_mouse(int e, int x, int y, int d, void *ptr)
-{
-	if (e == EVENT_LBUTTONDOWN)
-	{
+void on_mouse(int e, int x, int y, int d, void *ptr) {
+	if (e == EVENT_LBUTTONDOWN) {
 		cout << "Left button of the mouse is clicked - position (" << x << ", " << y << ")" << endl;
 	}
 }
 
-void on_trackbar(int, void*)
-{//This function gets called whenever a
- // trackbar position is changed
+void on_trackbar(int, void*) {
+    //This function gets called whenever a
+    // trackbar position is changed
 }
 
 string intToString(int number) {
-
-
 	std::stringstream ss;
 	ss << number;
 	return ss.str();
@@ -86,8 +69,6 @@ string intToString(int number) {
 
 void createTrackbars() {
 	//create window for trackbars
-
-
 	namedWindow(trackbarWindowName, 0);
 	//create memory to store trackbar name on window
 	char TrackbarName[50];
@@ -97,6 +78,9 @@ void createTrackbars() {
 	sprintf(TrackbarName, "S_MAX", S_MAX);
 	sprintf(TrackbarName, "V_MIN", V_MIN);
 	sprintf(TrackbarName, "V_MAX", V_MAX);
+
+	sprintf(TrackbarName, "X", X_MIN);
+	sprintf(TrackbarName, "Y", Y_MIN);
 	//create trackbars and insert them into window
 	//3 parameters are: the address of the variable that is changing when the trackbar is moved(eg.H_LOW),
 	//the max value the trackbar can move (eg. H_HIGH),
@@ -109,10 +93,11 @@ void createTrackbars() {
 	createTrackbar("V_MIN", trackbarWindowName, &V_MIN, V_MAX, on_trackbar);
 	createTrackbar("V_MAX", trackbarWindowName, &V_MAX, V_MAX, on_trackbar);
 
-
+	createTrackbar("X", trackbarWindowName, &X_MIN, X_MAX, on_trackbar);
+	createTrackbar("Y", trackbarWindowName, &Y_MIN, Y_MAX, on_trackbar);
 }
-void drawObject(int x, int y, Mat &frame) {
 
+void drawObject(int x, int y, Mat &frame) {
 	//use some of the openCV drawing functions to draw crosshairs
 	//on your tracked image!
 
@@ -136,13 +121,11 @@ void drawObject(int x, int y, Mat &frame) {
 
 	putText(frame, intToString(x) + "," + intToString(y), Point(x, y + 30), 1, 1, Scalar(0, 255, 0), 2);
 	//cout << "x,y: " << x << ", " << y;
-
 }
-void morphOps(Mat &thresh) {
 
+void morphOps(Mat &thresh) {
 	//create structuring element that will be used to "dilate" and "erode" image.
 	//the element chosen here is a 3px by 3px rectangle
-
 	Mat erodeElement = getStructuringElement(MORPH_RECT, Size(3, 3));
 	//dilate with larger element so make sure object is nicely visible
 	Mat dilateElement = getStructuringElement(MORPH_RECT, Size(8, 8));
@@ -150,13 +133,10 @@ void morphOps(Mat &thresh) {
 	erode(thresh, thresh, erodeElement);
 	erode(thresh, thresh, erodeElement);
 
-
 	dilate(thresh, thresh, dilateElement);
 	dilate(thresh, thresh, dilateElement);
-
-
-
 }
+
 void trackFilteredObject(int &x, int &y, Mat threshold, Mat &cameraFeed) {
 
 	Mat temp;
@@ -189,8 +169,6 @@ void trackFilteredObject(int &x, int &y, Mat threshold, Mat &cameraFeed) {
 					refArea = area;
 				}
 				else objectFound = false;
-
-
 			}
 			//let user know you found an object
 			if (objectFound == true) {
@@ -198,29 +176,25 @@ void trackFilteredObject(int &x, int &y, Mat threshold, Mat &cameraFeed) {
 				//draw object location on screen
 				//cout << x << "," << y;
 				drawObject(x, y, cameraFeed);
-
 			}
-
-
 		}
 		else putText(cameraFeed, "TOO MUCH NOISE! ADJUST FILTER", Point(0, 50), 1, 2, Scalar(0, 0, 255), 2);
 	}
 }
-int main(int argc, char* argv[])
-{
 
+int main(int argc, char* argv[]) {
 	//some boolean variables for different functionality within this
 	//program
 	bool trackObjects = true;
 	bool useMorphOps = true;
- 
- //for socket 
-  int socketfd,portno, n;
-  char buffer[10];
-  struct hostent *server;
-  portno=atoi("20231");
-  struct sockaddr_in serv_addr;
-  
+
+ //for socket
+    int socketfd, portno, n;
+    char buffer[10];
+    struct hostent *server;
+    portno = atoi("20231");
+    struct sockaddr_in serv_addr;
+
 	Point p;
 	//Matrix to store each frame of the webcam feed
 	Mat cameraFeed;
@@ -241,111 +215,153 @@ int main(int argc, char* argv[])
 	capture.set(CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
 	//start an infinite loop where webcam feed is copied to cameraFeed matrix
 	//all of our operations will be performed within this loop
-  
 
+    // Allocate our points and the playground
+    area *c;
+    point *o, *d, *e;
+    int oc[6], dc[6], ec[6];
 
-	
+    o = malloc(sizeof(struct point));
+    e = malloc(sizeof(struct point));
+    d = malloc(sizeof(struct point));
+    c = malloc(sizeof(struct area));
+    if(!o || !e || !d || !c) {
+        printf("Allocation error!\n");
+        return 1;
+    }
+    c->o = malloc(sizeof(struct point));
+    if(!c->o) {
+        printf("Allocation error!\n");
+        return 1;
+    }
+
+    if(argc != 4) { // We need to get the R manually
+        while(1) {
+            capture.read(cameraFeed);
+            if(cameraFeed.empty ()!= 0) {
+                return 1;
+            }
+            else {
+                cvtColor(cameraFeed, HSV, COLOR_BGR2HSV);
+
+                inRange(HSV, Scalar(H_MIN, S_MIN, V_MIN), Scalar(H_MAX, S_MAX, V_MAX), threshold);
+                drawObject(X_MIN, Y_MIN, cameraFeed); // We can draw the object where we want
+
+                inRange(HSV, Scalar(BH_MIN, BS_MIN, BV_MIN), Scalar(BH_MAX, BS_MAX, BV_MAX), threshold); // We need to get the center of the black area
+                if (useMorphOps)
+                    morphOps(threshold);
+                if (trackObjects)
+                    trackFilteredObject(x, y, threshold, cameraFeed);
+                drawObject(x, y, cameraFeed);
+
+                imshow(windowName, cameraFeed);
+                setMouseCallback("Original Image", on_mouse, &p);
+                waitKey(30);
+            }
+        }
+    }
+    // Initialization:
+    capture.read(cameraFeed);
+    if(cameraFeed.empty ()!= 0)
+        return 1;
+    else {
+        inRange(HSV, Scalar(BH_MIN, BS_MIN, BV_MIN), Scalar(BH_MAX, BS_MAX, BV_MAX), threshold); // We need to get the center of the black area
+        if (useMorphOps)
+            morphOps(threshold);
+        if (trackObjects)
+            trackFilteredObject(x, y, threshold, cameraFeed);
+        c->o->x = x;
+        c->o->y = y;
+        c->r = cr;
+        getColor(argv[1], &oc);
+        getColor(argv[2], &dc);
+        getColor(argv[3], &ec);
+    }
+
 	while (1) {
+        //store image to matrix
+        capture.read(cameraFeed);
+        if(cameraFeed.empty ()!= 0) {
+            return 1;
+        }
+        else {
+            //convert frame from BGR to HSV colorspace
+            cvtColor(cameraFeed, HSV, COLOR_BGR2HSV);
+            //filter HSV image between values and store filtered image to threshold matrix
 
+            inRange(HSV, Scalar(oc[0], oc[2], oc[4]), Scalar(oc[1], oc[3], oc[5]), threshold); // Detecting our position
+            //perform morphological operations on thresholded image to eliminate noise
+            //and emphasize the filtered object(s)
+            if (useMorphOps)
+                morphOps(threshold);
+            //pass in thresholded frame to our object tracking function
+            //this function will return the x and y coordinates of the
+            //filtered object
+            if (trackObjects)
+                trackFilteredObject(x, y, threshold, cameraFeed);
+            o->x = x;
+            o->y = y;
 
-		//store image to matrix
-		capture.read(cameraFeed);
-   if(cameraFeed.empty ()!= 0)
-   {
-   return 1;
-   }
-   else
-   {
-		//convert frame from BGR to HSV colorspace
-		cvtColor(cameraFeed, HSV, COLOR_BGR2HSV);
-		//filter HSV image between values and store filtered image to
-		//threshold matrix
-   
-   	/*	inRange(HSV, Scalar(H_MIN, S_MIN, V_MIN), Scalar(H_MAX, S_MAX, V_MAX), threshold);
-		//perform morphological operations on thresholded image to eliminate noise
-		//and emphasize the filtered object(s)
-		if (useMorphOps)
-			morphOps(threshold);
-		//pass in thresholded frame to our object tracking function
-		//this function will return the x and y coordinates of the
-		//filtered object
-		if (trackObjects)
-			trackFilteredObject(x, y, threshold, cameraFeed);
-   
-   */
-   
-   
-		inRange(HSV, Scalar(H_MIN_R, S_MIN_R, V_MIN_R), Scalar(H_MAX_R, S_MAX_R, V_MAX_R), threshold);
-		//perform morphological operations on thresholded image to eliminate noise
-		//and emphasize the filtered object(s)
-		if (useMorphOps)
-			morphOps(threshold);
-		//pass in thresholded frame to our object tracking function
-		//this function will return the x and y coordinates of the
-		//filtered object
-		if (trackObjects)
-			trackFilteredObject(x, y, threshold, cameraFeed);
+            inRange(HSV, Scalar(dc[0], dc[2], dc[4]), Scalar(dc[1], dc[3], dc[5]), threshold); // Detecting our direction
+            //perform morphological operations on thresholded image to eliminate noise
+            //and emphasize the filtered object(s)
+            if (useMorphOps)
+            morphOps(threshold);
+            //pass in thresholded frame to our object tracking function
+            //this function will return the x and y coordinates of the
+            //filtered object
+            if (trackObjects)
+            trackFilteredObject(x, y, threshold, cameraFeed);
+            d->x = x;
+            d->y = y;
 
-		inRange(HSV, Scalar(H_MIN_V, S_MIN_V, V_MIN_V), Scalar(H_MAX_V, S_MAX_V, V_MAX_V), threshold);
-		//perform morphological operations on thresholded image to eliminate noise
-		//and emphasize the filtered object(s)
-		if (useMorphOps)
-			morphOps(threshold);
-		//pass in thresholded frame to our object tracking function
-		//this function will return the x and y coordinates of the
-		//filtered object
-		if (trackObjects)
-			trackFilteredObject(x, y, threshold, cameraFeed);
-      
-   	inRange(HSV, Scalar(H_MIN_G, S_MIN_G, V_MIN_G), Scalar(H_MAX_G, S_MAX_G, V_MAX_G), threshold);
-		//perform morphological operations on thresholded image to eliminate noise
-		//and emphasize the filtered object(s)
-		if (useMorphOps)
-			morphOps(threshold);
-		//pass in thresholded frame to our object tracking function
-		//this function will return the x and y coordinates of the
-		//filtered object
-		if (trackObjects)
-			trackFilteredObject(x, y, threshold, cameraFeed);
+            inRange(HSV, Scalar(ec[0], ec[2], ec[4]), Scalar(ec[1], ec[3], ec[5]), threshold); // Detecting the enemy's position
+            //perform morphological operations on thresholded image to eliminate noise
+            //and emphasize the filtered object(s)
+            if (useMorphOps)
+                morphOps(threshold);
+            //pass in thresholded frame to our object tracking function
+            //this function will return the x and y coordinates of the
+            //filtered object
+            if (trackObjects)
+                trackFilteredObject(x, y, threshold, cameraFeed);
+            e->x = x;
+            e->y = y;
 
-		//show frames
-		imshow(windowName2, threshold);
-		imshow(windowName, cameraFeed);
-		//imshow(windowName1, HSV);
-   /*
-   //socket transmision
-   socketfd=socket(AF_INET,SOCK_STREAM,0);
-   if(socketfd < 0)
-     perror("Error opening socket");
-   server= gethostbyname("193.226.12.217");
-   if(server==NULL)
-     perror("error, no host");
-     
-     
-   bzero((char *) &serv_addr, sizeof(serv_addr));
-    serv_addr.sin_family = AF_INET;
-    bcopy((char *)server->h_addr, 
-         (char *)&serv_addr.sin_addr.s_addr,
-         server->h_length);
-    serv_addr.sin_port = htons(portno);
-    if (connect(socketfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) 
-        perror("ERROR connecting");
-     
-     bzero(buffer,256);
-     sprintf(buffer,"fs");
-     n = write(socketfd,buffer, strlen(buffer));
-     if(n < 0)
-     {
-      perror("Error writing");
-     }
-    */ 
-		setMouseCallback("Original Image", on_mouse, &p);
-		//delay 30ms so that screen can refresh.
-		//image will not appear without this waitKey() command
-		waitKey(30);
-   }
+            //show frames
+            //imshow(windowName2, threshold);
+            //imshow(windowName, cameraFeed);
+            //imshow(windowName1, HSV);
+
+            //socket transmision
+            socketfd = socket(AF_INET, SOCK_STREAM, 0);
+            if(socketfd < 0)
+                perror("Error opening socket");
+            server = gethostbyname("193.226.12.217");
+            if(server == NULL)
+                perror("error, no host");
+
+            bzero((char *) &serv_addr, sizeof(serv_addr));
+            serv_addr.sin_family = AF_INET;
+            bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
+            serv_addr.sin_port = htons(portno);
+            if(connect(socketfd,(struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
+                perror("ERROR connecting");
+
+            bzero(buffer, 256);
+
+            sprintf(buffer, moveRobot(c, o, d, e)); // GO GO GO!
+
+            n = write(socketfd, buffer, strlen(buffer));
+            if(n < 0)
+                perror("Error writing");
+
+            setMouseCallback("Original Image", on_mouse, &p);
+            //delay 30ms so that screen can refresh.
+            //image will not appear without this waitKey() command
+            waitKey(30);
+        }
 	}
 
 	return 0;
 }
-

@@ -259,6 +259,7 @@ int main(int argc, char* argv[]) {
                 waitKey(30);
             }
         }
+        return 0;
     }
     // Initialization:
     capture.read(cameraFeed);
@@ -350,7 +351,10 @@ int main(int argc, char* argv[]) {
 
             bzero(buffer, 256);
 
-            sprintf(buffer, moveRobot(c, o, d, e)); // GO GO GO!
+            if(checkWinLoseCondition(e, o, c))
+                sprintf(buffer, "s");           // if somebody won the game, our robot stops
+            else
+                sprintf(buffer, moveRobot(c, o, d, e)); // else GO GO GO!
 
             n = write(socketfd, buffer, strlen(buffer));
             if(n < 0)

@@ -50,6 +50,40 @@ const std::string windowName2 = "Thresholded Image";
 const std::string windowName3 = "After Morphological Operations";
 const std::string trackbarWindowName = "Trackbars";
 
+
+int socketfd, portno, n;	
+struct hostent *server;
+struct sockaddr_in serv_addr;
+
+int socket() {
+	char hostIP[] = "193.226.12.217";
+	portno = atoi("20232");
+
+	socketfd = socket(AF_INET, SOCK_STREAM, 0);
+	if(socketfd < 0) {
+		cout<<"Socket error!\n"<<endl;
+		return 1;
+	}
+
+	server = gethostbyname(hostIP);
+	if(server == NULL) {
+		cout<<"Server error!\n"<<endl;
+		return 1;
+	}
+
+	bzero((char *) &remote, sizeof(remote));
+	remote.sin_family = AF_INET;
+
+	bcopy((char *) server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
+	serv_addr.sin_port = htons(portno);
+
+	if(connect(socketfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr))<0){
+		cout<<"Connection error!\n"<<endl;
+		return 1;
+	}
+	return 0;
+}
+
 void on_mouse(int e, int x, int y, int d, void *ptr) {
 	if (e == EVENT_LBUTTONDOWN) {
 		cout << "Left button of the mouse is clicked - position (" << x << ", " << y << ")" << endl;
@@ -188,12 +222,8 @@ int main(int argc, char* argv[]) {
 	bool trackObjects = true;
 	bool useMorphOps = true;
 
- //for socket
-    int socketfd, portno, n;
     char buffer[10];
-    struct hostent *server;
-    
-    struct sockaddr_in serv_addr;
+	if(socket()) return 1;
 
 	Point p;
 	//Matrix to store each frame of the webcam feed
@@ -257,19 +287,7 @@ int main(int argc, char* argv[]) {
                 setMouseCallback("Original Image", on_mouse, &p);
                 
             //socket transmision
-            
-            portno = 20231;
-            socketfd = socket(AF_INET, SOCK_STREAM, 0);
-            if(socketfd < 0)
-                perror("Error opening socket");
-            server = gethostbyname("193.226.12.217");
-            if(server == NULL)
-                perror("error, no host");
-
-            bzero((char *) &serv_addr, sizeof(serv_addr));
-            serv_addr.sin_family = AF_INET;
-            bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
-            serv_addr.sin_port = htons(portno);
+          
             
             if(connect(socketfd,(struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
                 perror("ERROR connecting");    
@@ -362,21 +380,6 @@ int main(int argc, char* argv[]) {
             //imshow(windowName1, HSV);
 
             //socket transmision
-            portno = 20233;
-            socketfd = socket(AF_INET, SOCK_STREAM, 0);
-            if(socketfd < 0)
-                perror("Error opening socket");
-            server = gethostbyname("193.226.12.217");
-            if(server == NULL)
-                perror("error, no host");
-
-            bzero((char *) &serv_addr, sizeof(serv_addr));
-            serv_addr.sin_family = AF_INET;
-            bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
-            serv_addr.sin_port = htons(portno);
-            if(connect(socketfd,(struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
-                perror("ERROR connecting");
-
             bzero(buffer, 256);
             
             if(checkWinLoseCondition(e, o, c))

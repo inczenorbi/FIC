@@ -5,13 +5,13 @@
 
 #define PI 3.14159265358979323846
 
-struct point {
+typedef struct point {
     int x, y;
 } point;
 
-struct area {
+typedef struct area {
 	int r;
-	struct point *o;
+	point *o;
 } area;
 /**
   * Returns the square of a number
@@ -27,7 +27,7 @@ int sqr(int x) {
   * @param b stores the position of the second point
   * @return the distance between A and B
 **/
-double distBetween(struct point *a, struct point *b) {
+double distBetween(point *a, point *b) {
     return sqrt(0.0 + sqr(a->x - b->x) + sqr(a->y - b->y));
 }
 /**
@@ -76,7 +76,7 @@ void getColor(char *color, int *v) {
   * @param c stores the attributes of the circle
   * @return 1 if the enemy or our robot is outside of the circle
 **/
-int checkWinLoseCondition(struct point *e, struct point *o, struct area *c) {
+int checkWinLoseCondition(point *e, point *o, area *c) {
 	if(distBetween(e, c->o) > c->r || distBetween(o, c->o) > c->r)
         return 1;
     else
@@ -89,7 +89,7 @@ int checkWinLoseCondition(struct point *e, struct point *o, struct area *c) {
   * @param c is the third point
   * @return angle of ABC
 **/
-double getAngle(struct point *a, struct point *b, struct point *c) {
+double getAngle(point *a, point *b, point *c) {
     double angle = abs((atan2(a->y - b->y, a->x - b->x) - atan2(c->y - b->y, c->x - b->x)) * 180 / PI);
 
     return (angle > 180) ? (360 - angle) : angle;
@@ -102,10 +102,11 @@ double getAngle(struct point *a, struct point *b, struct point *c) {
   * @param e stores the enemy's position
   * @return the letter of the selected action
 **/
-char *chooseAction(struct area *c, struct point *o, struct point *d, struct point *e) {
+char *chooseAction(area *c, point *o, point *d, point *e) {
     int i, index = 0, dr = distBetween(o, d);
-    struct point *dless, *dmore;
+    point *dless, *dmore;
     double radian = 2 * PI, DOE = getAngle(e, o, d);
+    char *action = new char[100];
 
     for(i = 0; i <= round(radian * dr); i++)
         if(d->x <= 0.25 + c->o->x + o->x + sin(radian * (i / (2 * dr * PI))) * dr  &&  d->y <= 0.25 + c->o->y + o->y + cos(radian * (i / (2 * dr * PI))) * dr) {
@@ -113,8 +114,8 @@ char *chooseAction(struct area *c, struct point *o, struct point *d, struct poin
             break;
         }
 
-    dmore = malloc(sizeof(struct point));
-    dless = malloc(sizeof(struct point));
+    dmore = new point();
+    dless = new point();
     if(!dless || !dmore) {
         printf("Allocaton error!\n");
         exit(-1);
@@ -126,19 +127,31 @@ char *chooseAction(struct area *c, struct point *o, struct point *d, struct poin
     dmore->y = c->o->y + o->y + cos(2 * PI * ((index + i / 8) / (2 * dr * PI))) * dr;
 
     if(DOE > 40 && DOE < 140 && distBetween(o, e) <= distBetween(o, d) * 6) { // Our robot is in danger by the enemy robot
-        if(distBetween(d, c->o) < distBetween(o, c->o))
-            return "f";
-        else
-            return "b";
+        if(distBetween(d, c->o) < distBetween(o, c->o)) {
+            strcpy(action, "f");
+            return action;
+        }
+        else {
+            strcpy(action, "b");
+            return action;
+        }
     }
-    else if(DOE <= 5 || (DOE <= 10 && distBetween(o, e) < c->r / 2)) // We will hit him if we go forward
-        return "f";
-    else if(DOE >= 175 || (DOE >= 170 && distBetween(o, e) < c->r / 2)) // We will hit him if we go backward
-        return "b";
-    else if(distBetween(dless, e) < distBetween(dmore, e)) // Turning to the right position
-        return "r";
-    else
-        return "l";
+    else if(DOE <= 5 || (DOE <= 10 && distBetween(o, e) < c->r / 2)) { // We will hit him if we go forward
+        strcpy(action, "f");
+        return action;
+    }
+    else if(DOE >= 175 || (DOE >= 170 && distBetween(o, e) < c->r / 2)) { // We will hit him if we go backward
+        strcpy(action, "b");
+        return action;
+    }
+    else if(distBetween(dless, e) < distBetween(dmore, e)) { // Turning to the right position
+        strcpy(action, "r");
+        return action;
+    }
+    else {
+        strcpy(action, "l");
+        return action;
+    }
 }
 /**
   * This function makes precisely our robot's action
@@ -148,8 +161,8 @@ char *chooseAction(struct area *c, struct point *o, struct point *d, struct poin
   * @param e stores the enemy's position
   * @return what our robot's need to do
 **/
-char *moveRobot(struct area *c, struct point *o, struct point *d, struct point *e) {        // FIXIT WITH TIMER
-    char *moves = malloc(100 * sizeof(char));
+char *moveRobot(area *c, point *o, point *d, point *e) {        // FIXIT WITH TIMER
+    char *moves = new char[100];
     int i;
     double DOE = getAngle(d, o, e);
 
@@ -157,7 +170,7 @@ char *moveRobot(struct area *c, struct point *o, struct point *d, struct point *
         printf("Allocation error!\n");
         exit(-1);
     }
-    strcpy(moves, chooseAction(c, o, d, e));
+    sprintf(moves, "%s", chooseAction(c, o, d, e));
 
     if(moves[0] == 'f') {
         if((distBetween(o, e) <= c->r / 2 && distBetween(o, c->o) <= c->r / 2) || distBetween(d, c->o) < distBetween(o, c->o))
@@ -181,42 +194,4 @@ char *moveRobot(struct area *c, struct point *o, struct point *d, struct point *
 
     strcat(moves, "s");
     return moves;
-}
-
-int main(void) {
-    struct point *o, *e, *d;
-    struct area *c;
-
-    o = malloc(sizeof(struct point));
-    e = malloc(sizeof(struct point));
-    d = malloc(sizeof(struct point));
-    c = malloc(sizeof(struct area));
-
-    if(!o || !e || !d || !c) {
-        printf("Allocation error!\n");
-        return 1;
-    }
-
-    c->o = malloc(sizeof(struct point));
-    if(!c->o) {
-        printf("Allocation error!\n");
-        return 1;
-    }
-
-    c->o->x = 0;
-    c->o->y = 0;
-    c->r = 100;
-
-    e->x = 70;
-    e->y = 90;
-
-    o->x = 90;
-    o->y = 90;
-
-    d->x = 80;
-    d->y = 90;
-
-    printf("DOE = %f\n%s\n", getAngle(d, o, e), moveRobot(c, o, d, e));
-
-    return 0;
 }

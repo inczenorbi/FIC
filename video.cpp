@@ -17,7 +17,7 @@
 
 #include "func.c"
 
-#define cr 0
+#define cr 261
 
 using namespace std;
 using namespace cv;
@@ -72,12 +72,12 @@ void createTrackbars() {
 	namedWindow(trackbarWindowName, 0);
 	//create memory to store trackbar name on window
 	char TrackbarName[50];
-	sprintf(TrackbarName, "H_MIN", H_MIN);
-	sprintf(TrackbarName, "H_MAX", H_MAX);
-	sprintf(TrackbarName, "S_MIN", S_MIN);
-	sprintf(TrackbarName, "S_MAX", S_MAX);
-	sprintf(TrackbarName, "V_MIN", V_MIN);
-	sprintf(TrackbarName, "V_MAX", V_MAX);
+	sprintf(TrackbarName, "H_MIN", BH_MIN);
+	sprintf(TrackbarName, "H_MAX", BH_MAX);
+	sprintf(TrackbarName, "S_MIN", BS_MIN);
+	sprintf(TrackbarName, "S_MAX", BS_MAX);
+	sprintf(TrackbarName, "V_MIN", BV_MIN);
+	sprintf(TrackbarName, "V_MAX", BV_MAX);
 
 	sprintf(TrackbarName, "X", X_MIN);
 	sprintf(TrackbarName, "Y", Y_MIN);
@@ -86,12 +86,12 @@ void createTrackbars() {
 	//the max value the trackbar can move (eg. H_HIGH),
 	//and the function that is called whenever the trackbar is moved(eg. on_trackbar)
 	//                                  ---->    ---->     ---->
-	createTrackbar("H_MIN", trackbarWindowName, &H_MIN, H_MAX, on_trackbar);
-	createTrackbar("H_MAX", trackbarWindowName, &H_MAX, H_MAX, on_trackbar);
-	createTrackbar("S_MIN", trackbarWindowName, &S_MIN, S_MAX, on_trackbar);
-	createTrackbar("S_MAX", trackbarWindowName, &S_MAX, S_MAX, on_trackbar);
-	createTrackbar("V_MIN", trackbarWindowName, &V_MIN, V_MAX, on_trackbar);
-	createTrackbar("V_MAX", trackbarWindowName, &V_MAX, V_MAX, on_trackbar);
+	createTrackbar("H_MIN", trackbarWindowName, &BH_MIN, BH_MAX, on_trackbar);
+	createTrackbar("H_MAX", trackbarWindowName, &BH_MAX, BH_MAX, on_trackbar);
+	createTrackbar("S_MIN", trackbarWindowName, &BS_MIN, BS_MAX, on_trackbar);
+	createTrackbar("S_MAX", trackbarWindowName, &BS_MAX, BS_MAX, on_trackbar);
+	createTrackbar("V_MIN", trackbarWindowName, &BV_MIN, BV_MAX, on_trackbar);
+	createTrackbar("V_MAX", trackbarWindowName, &BV_MAX, BV_MAX, on_trackbar);
 
 	createTrackbar("X", trackbarWindowName, &X_MIN, X_MAX, on_trackbar);
 	createTrackbar("Y", trackbarWindowName, &Y_MIN, Y_MAX, on_trackbar);
@@ -192,7 +192,7 @@ int main(int argc, char* argv[]) {
     int socketfd, portno, n;
     char buffer[10];
     struct hostent *server;
-    portno = atoi("20231");
+    
     struct sockaddr_in serv_addr;
 
 	Point p;
@@ -218,18 +218,18 @@ int main(int argc, char* argv[]) {
 
     // Allocate our points and the playground
     area *c;
-    point *o, *d, *e;
+    point *o = NULL, *d = NULL, *e = NULL;
     int oc[6], dc[6], ec[6];
 
-    o = malloc(sizeof(struct point));
-    e = malloc(sizeof(struct point));
-    d = malloc(sizeof(struct point));
-    c = malloc(sizeof(struct area));
+    o = new point();
+    e = new point();
+    d = new point();
+    c = new area();
     if(!o || !e || !d || !c) {
         printf("Allocation error!\n");
         return 1;
     }
-    c->o = malloc(sizeof(struct point));
+    c->o = new point();
     if(!c->o) {
         printf("Allocation error!\n");
         return 1;
@@ -243,19 +243,46 @@ int main(int argc, char* argv[]) {
             }
             else {
                 cvtColor(cameraFeed, HSV, COLOR_BGR2HSV);
-
-                inRange(HSV, Scalar(H_MIN, S_MIN, V_MIN), Scalar(H_MAX, S_MAX, V_MAX), threshold);
-                drawObject(X_MIN, Y_MIN, cameraFeed); // We can draw the object where we want
-
                 inRange(HSV, Scalar(BH_MIN, BS_MIN, BV_MIN), Scalar(BH_MAX, BS_MAX, BV_MAX), threshold); // We need to get the center of the black area
+                drawObject(X_MIN, Y_MIN, cameraFeed); // We can draw the object where we want
                 if (useMorphOps)
                     morphOps(threshold);
                 if (trackObjects)
                     trackFilteredObject(x, y, threshold, cameraFeed);
                 drawObject(x, y, cameraFeed);
 
+                imshow(windowName2, threshold);
                 imshow(windowName, cameraFeed);
+                //imshow(windowName1, HSV);
                 setMouseCallback("Original Image", on_mouse, &p);
+                
+            //socket transmision
+            
+            portno = 20231;
+            socketfd = socket(AF_INET, SOCK_STREAM, 0);
+            if(socketfd < 0)
+                perror("Error opening socket");
+            server = gethostbyname("193.226.12.217");
+            if(server == NULL)
+                perror("error, no host");
+
+            bzero((char *) &serv_addr, sizeof(serv_addr));
+            serv_addr.sin_family = AF_INET;
+            bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
+            serv_addr.sin_port = htons(portno);
+            
+            if(connect(socketfd,(struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
+                perror("ERROR connecting");    
+            sprintf(buffer,"%s" ,"r"); // else GO GO GO!
+            n = write(socketfd, "r", 1);
+            
+            if(n < 0)
+                perror("Error writing");
+
+            setMouseCallback("Original Image", on_mouse, &p);
+
+            bzero(buffer, 256);
+            
                 waitKey(30);
             }
         }
@@ -265,18 +292,18 @@ int main(int argc, char* argv[]) {
     capture.read(cameraFeed);
     if(cameraFeed.empty ()!= 0)
         return 1;
-    else {
+    else {/*
         inRange(HSV, Scalar(BH_MIN, BS_MIN, BV_MIN), Scalar(BH_MAX, BS_MAX, BV_MAX), threshold); // We need to get the center of the black area
         if (useMorphOps)
             morphOps(threshold);
         if (trackObjects)
-            trackFilteredObject(x, y, threshold, cameraFeed);
-        c->o->x = x;
-        c->o->y = y;
+            trackFilteredObject(x, y, threshold, cameraFeed);*/
+        c->o->x = 412;
+        c->o->y = 286;
         c->r = cr;
-        getColor(argv[1], &oc);
-        getColor(argv[2], &dc);
-        getColor(argv[3], &ec);
+        getColor(argv[1], oc);
+        getColor(argv[2], dc);
+        getColor(argv[3], ec);
     }
 
 	while (1) {
@@ -331,10 +358,11 @@ int main(int argc, char* argv[]) {
 
             //show frames
             //imshow(windowName2, threshold);
-            //imshow(windowName, cameraFeed);
+            imshow(windowName, cameraFeed);
             //imshow(windowName1, HSV);
 
             //socket transmision
+            portno = 20233;
             socketfd = socket(AF_INET, SOCK_STREAM, 0);
             if(socketfd < 0)
                 perror("Error opening socket");
@@ -350,11 +378,11 @@ int main(int argc, char* argv[]) {
                 perror("ERROR connecting");
 
             bzero(buffer, 256);
-
+            
             if(checkWinLoseCondition(e, o, c))
                 sprintf(buffer, "s");           // if somebody won the game, our robot stops
             else
-                sprintf(buffer, moveRobot(c, o, d, e)); // else GO GO GO!
+                sprintf(buffer, "%s", moveRobot(c, o, d, e)); // else GO GO GO!
 
             n = write(socketfd, buffer, strlen(buffer));
             if(n < 0)

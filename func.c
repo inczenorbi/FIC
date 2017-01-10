@@ -70,43 +70,17 @@ void getColor(char *color, int *v) {
 	}
 }
 /**
-  * Tells us if we won the game.
+  * Tells us if we won or we lose the game.
   * @param e stores the position of the enemy
-  * @param c stores the attributes of the circle
-  * @return 1 if the enemy is outside of the circle
-**/
-int checkWinCondition(struct point *e, struct area *c) {
-	if(distBetween(e, c->o) > c->r)
-        return 1;
-    else
-        return 0;
-}
-/**
-  * Tells us we are in safe zone or not.
   * @param o stores our robot's position
-  * @param d stores our direction's position
   * @param c stores the attributes of the circle
-  * @return 1 if we are in safe zone
+  * @return 1 if the enemy or our robot is outside of the circle
 **/
-int checkSafeZone(struct point *o, struct point *d, struct area *c) {
-    if(distBetween(o, c->o) < c->r - 2 * distBetween(o, d))
+int checkWinLoseCondition(struct point *e, struct point *o, struct area *c) {
+	if(distBetween(e, c->o) > c->r || distBetween(o, c->o) > c->r)
         return 1;
     else
         return 0;
-}
-/**
-  * Tells us the distance between a point and a straight.
-  * @param d stores a point's position
-  * @param a stores the first point's position
-  * @param b stores the second point's position
-  * @return the distance between the D point and the AB straight
-**/
-double onStraight(struct point *d, struct point *a, struct point *b) {
-    int nx, ny, c;
-    nx = b->x - a->x;
-    ny = -(b->y - a->y);
-    c = a->x * nx + a->y * ny;
-    return abs(0.0 + nx * d->x + ny * d->y + c) / sqrt(0.0 + sqr(nx) + sqr(ny));
 }
 /**
   * Returns the angle of the 3 points
@@ -151,7 +125,7 @@ char *chooseAction(struct area *c, struct point *o, struct point *d, struct poin
     dmore->x = c->o->x + o->x + sin(2 * PI * ((index + i / 8) / (2 * dr * PI))) * dr;
     dmore->y = c->o->y + o->y + cos(2 * PI * ((index + i / 8) / (2 * dr * PI))) * dr;
 
-    if(DOE > 25 && DOE < 155 && distBetween(o, e) <= distBetween(o, d) * 6) { // Our robot is in danger by the enemy robot
+    if(DOE > 40 && DOE < 140 && distBetween(o, e) <= distBetween(o, d) * 6) { // Our robot is in danger by the enemy robot
         if(distBetween(d, c->o) < distBetween(o, c->o))
             return "f";
         else

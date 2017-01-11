@@ -31,9 +31,9 @@ int Y_MIN = 0;
 int Y_MAX = 1024;
 
 int BH_MIN = 0;
-int BH_MAX = 256;
+int BH_MAX = 60;
 int BS_MIN = 0;
-int BS_MAX = 256;
+int BS_MAX = 21;
 int BV_MIN = 0;
 int BV_MAX = 256;
 

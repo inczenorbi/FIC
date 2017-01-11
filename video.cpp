@@ -17,6 +17,8 @@
 
 #include "func.c"
 
+#define cx 416
+#define cy 307
 #define cr 261
 
 using namespace std;
@@ -57,7 +59,7 @@ struct sockaddr_in serv_addr;
 
 int socket() {
 	char hostIP[] = "193.226.12.217";
-	portno = atoi("20232");
+	portno = atoi("20231");
 
 	socketfd = socket(AF_INET, SOCK_STREAM, 0);
 	if(socketfd < 0) {
@@ -71,8 +73,8 @@ int socket() {
 		return 1;
 	}
 
-	bzero((char *) &remote, sizeof(remote));
-	remote.sin_family = AF_INET;
+	bzero((char *) &serv_addr, sizeof(serv_addr));
+	serv_addr.sin_family = AF_INET;
 
 	bcopy((char *) server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
 	serv_addr.sin_port = htons(portno);
@@ -222,8 +224,9 @@ int main(int argc, char* argv[]) {
 	bool trackObjects = true;
 	bool useMorphOps = true;
 
-    char buffer[10];
-	if(socket()) return 1;
+  char buffer[10];
+	
+  if(socket()) return 1;
 
 	Point p;
 	//Matrix to store each frame of the webcam feed
@@ -307,22 +310,12 @@ int main(int argc, char* argv[]) {
         return 0;
     }
     // Initialization:
-    capture.read(cameraFeed);
-    if(cameraFeed.empty ()!= 0)
-        return 1;
-    else {/*
-        inRange(HSV, Scalar(BH_MIN, BS_MIN, BV_MIN), Scalar(BH_MAX, BS_MAX, BV_MAX), threshold); // We need to get the center of the black area
-        if (useMorphOps)
-            morphOps(threshold);
-        if (trackObjects)
-            trackFilteredObject(x, y, threshold, cameraFeed);*/
-        c->o->x = 412;
-        c->o->y = 286;
-        c->r = cr;
-        getColor(argv[1], oc);
-        getColor(argv[2], dc);
-        getColor(argv[3], ec);
-    }
+    c->o->x = cx;
+    c->o->y = cy;
+    c->r = cr;
+    getColor(argv[1], oc);
+    getColor(argv[2], dc);
+    getColor(argv[3], ec);
 
 	while (1) {
         //store image to matrix
@@ -385,8 +378,9 @@ int main(int argc, char* argv[]) {
             if(checkWinLoseCondition(e, o, c))
                 sprintf(buffer, "s");           // if somebody won the game, our robot stops
             else
-                sprintf(buffer, "%s", moveRobot(c, o, d, e)); // else GO GO GO!
+                sprintf(buffer, "%s", chooseAction(c, o, d, e)); // else GO GO GO!
 
+            strcat(buffer, "s");
             n = write(socketfd, buffer, strlen(buffer));
             if(n < 0)
                 perror("Error writing");

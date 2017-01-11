@@ -57,9 +57,9 @@ int socketfd, portno, n;
 struct hostent *server;
 struct sockaddr_in serv_addr;
 
-int socket() {
+int socket(char *port) {
 	char hostIP[] = "193.226.12.217";
-	portno = atoi("20231");
+	portno = atoi(port);
 
 	socketfd = socket(AF_INET, SOCK_STREAM, 0);
 	if(socketfd < 0) {
@@ -226,7 +226,7 @@ int main(int argc, char* argv[]) {
 
   char buffer[10];
 	
-  if(socket()) return 1;
+  if(socket(argv[1])) return 1;
 
 	Point p;
 	//Matrix to store each frame of the webcam feed
@@ -236,7 +236,7 @@ int main(int argc, char* argv[]) {
 	//matrix storage for binary threshold image
 	Mat threshold;
 	//x and y values for the location of the object
-	int x = 0, y = 0;
+	int x, y;
 	//create slider bars for HSV filtering
 	createTrackbars();
 	//video capture object to acquire webcam feed
@@ -268,7 +268,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    if(argc != 4) { // We need to get the R manually
+    if(argc != 5) { // We need to get the R manually
         while(1) {
             capture.read(cameraFeed);
             if(cameraFeed.empty ()!= 0) {
@@ -313,9 +313,9 @@ int main(int argc, char* argv[]) {
     c->o->x = cx;
     c->o->y = cy;
     c->r = cr;
-    getColor(argv[1], oc);
-    getColor(argv[2], dc);
-    getColor(argv[3], ec);
+    getColor(argv[2], oc);
+    getColor(argv[3], dc);
+    getColor(argv[4], ec);
 
 	while (1) {
         //store image to matrix
@@ -328,6 +328,8 @@ int main(int argc, char* argv[]) {
             cvtColor(cameraFeed, HSV, COLOR_BGR2HSV);
             //filter HSV image between values and store filtered image to threshold matrix
 
+		x = 0;
+		y = 0;
             inRange(HSV, Scalar(oc[0], oc[2], oc[4]), Scalar(oc[1], oc[3], oc[5]), threshold); // Detecting our position
             //perform morphological operations on thresholded image to eliminate noise
             //and emphasize the filtered object(s)
@@ -354,6 +356,8 @@ int main(int argc, char* argv[]) {
             d->x = x;
             d->y = y;
 
+		x = 0;
+		y = 0;
             inRange(HSV, Scalar(ec[0], ec[2], ec[4]), Scalar(ec[1], ec[3], ec[5]), threshold); // Detecting the enemy's position
             //perform morphological operations on thresholded image to eliminate noise
             //and emphasize the filtered object(s)
@@ -375,7 +379,7 @@ int main(int argc, char* argv[]) {
             //socket transmision
             bzero(buffer, 256);
             
-            if(checkWinLoseCondition(e, o, c))
+            if(checkWinLoseCondition(e, o, c) || (e->x == 0 && e->y == 0) || (o->x == 0 && o->y == 0))
                 sprintf(buffer, "s");           // if somebody won the game, our robot stops
             else
                 sprintf(buffer, "%s", chooseAction(c, o, d, e)); // else GO GO GO!
